@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Głosowanie Eurowizyjne</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --void:#0A0618;
+  --stage:#170B33;
+  --stage-2:#1E1042;
+  --line:rgba(242,236,255,.14);
+  --spot:#FF2D6F;
+  --beam:#3DE0FF;
+  --points:#FFC84A;
+  --ink:#F2ECFF;
+  --ink-dim:rgba(242,236,255,.58);
+  --ok:#3BE08B;
+  --bad:#FF5C5C;
+  --display:"Anton",Impact,"Haettenschweiler",sans-serif;
+  --body:"DM Sans",system-ui,-apple-system,Segoe UI,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--void);
+  color:var(--ink);
+  font-family:var(--body);
+  font-size:16px;
+  line-height:1.5;
+  min-height:100vh;
+  overflow-x:hidden;
+}
+.stagelight{
+  position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(60vw 70vh at 12% -10%, rgba(255,45,111,.30), transparent 65%),
+    radial-gradient(55vw 65vh at 90% 0%, rgba(61,224,255,.22), transparent 62%),
+    radial-gradient(80vw 60vh at 50% 105%, rgba(255,200,74,.10), transparent 70%);
+}
+.grain{
+  position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5;
+  background-image:repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 1px,transparent 1px 3px);
+}
+.wrap{position:relative;z-index:1;max-width:940px;margin:0 auto;padding:0 20px 120px}
+
+/* ---------- nagłówek ---------- */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:22px 0 8px}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-dim)}
+.brand b{color:var(--ink);font-weight:700}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--spot);box-shadow:0 0 12px var(--spot)}
+.navlink{background:none;border:0;color:var(--ink-dim);font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;cursor:pointer;padding:8px 2px;border-bottom:1px solid transparent}
+.navlink:hover,.navlink:focus-visible{color:var(--ink);border-bottom-color:var(--spot)}
+
+/* ---------- typografia ---------- */
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--beam);margin:0 0 14px}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(52px,13vw,132px);line-height:.86;letter-spacing:-.01em;text-transform:uppercase;margin:0}
+h2{font-family:var(--display);font-weight:400;font-size:clamp(26px,5vw,40px);line-height:1;text-transform:uppercase;letter-spacing:.01em;margin:0 0 6px}
+h3{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-dim);margin:0 0 12px;font-weight:400}
+.lede{color:var(--ink-dim);max-width:46ch;margin:18px 0 0}
+
+/* ---------- widoki ---------- */
+.view{display:none;animation:fade .35s ease both}
+.view.on{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ---------- ekran startowy ---------- */
+.hero{padding:8vh 0 0}
+.hero h1{background:linear-gradient(96deg,var(--ink) 0%,var(--ink) 46%,var(--spot) 78%,var(--points) 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.bigbtn{
+  margin-top:38px;display:inline-flex;align-items:center;gap:18px;
+  font-family:var(--display);font-size:clamp(30px,6vw,52px);text-transform:uppercase;letter-spacing:.02em;
+  background:var(--spot);color:#fff;border:0;border-radius:2px;
+  padding:18px 34px;cursor:pointer;
+  box-shadow:0 0 0 0 rgba(255,45,111,.55);
+  transition:transform .18s ease,box-shadow .3s ease;
+}
+.bigbtn:hover,.bigbtn:focus-visible{transform:translateY(-2px);box-shadow:0 14px 44px -10px rgba(255,45,111,.8)}
+.bigbtn:disabled{background:#3A2B52;color:var(--ink-dim);cursor:not-allowed;transform:none;box-shadow:none}
+.bigbtn .arrow{font-size:.6em;opacity:.7}
+.statusline{margin-top:22px;font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim)}
+.pill{display:inline-block;padding:4px 10px;border-radius:2px;font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase}
+.pill.open{background:rgba(59,224,139,.16);color:var(--ok)}
+.pill.closed{background:rgba(255,92,92,.16);color:var(--bad)}
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin-top:56px}
+.rule{background:var(--void);padding:20px}
+.rule .n{font-family:var(--display);font-size:44px;line-height:1;color:var(--points)}
+.rule p{margin:8px 0 0;font-size:14px;color:var(--ink-dim)}
+
+/* ---------- panele / formularze ---------- */
+.panel{background:linear-gradient(180deg,var(--stage) 0%,rgba(23,11,51,.55) 100%);border:1px solid var(--line);padding:24px;margin-top:24px}
+.field{display:block;margin:0 0 16px}
+.field span{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:7px}
+input[type=text],input[type=password],input[type=number],select{
+  width:100%;background:rgba(10,6,24,.7);border:1px solid var(--line);color:var(--ink);
+  padding:13px 14px;font-family:var(--body);font-size:16px;border-radius:2px;
+}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--beam);outline-offset:2px}
+.keyinput{font-family:var(--mono);font-size:22px;letter-spacing:.16em;text-transform:uppercase;text-align:center;padding:18px 14px}
+.btn{
+  font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;
+  background:var(--ink);color:var(--void);border:0;border-radius:2px;padding:13px 20px;cursor:pointer;
+  transition:opacity .15s ease;
+}
+.btn:hover{opacity:.82}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.pink{background:var(--spot);color:#fff}
+.btn.danger{background:transparent;color:var(--bad);border:1px solid rgba(255,92,92,.4)}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.btn.small{padding:8px 12px;font-size:11px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.msg{margin-top:14px;font-family:var(--mono);font-size:12px;letter-spacing:.06em;padding:11px 13px;border-left:2px solid}
+.msg.err{color:var(--bad);border-color:var(--bad);background:rgba(255,92,92,.08)}
+.msg.ok{color:var(--ok);border-color:var(--ok);background:rgba(59,224,139,.08)}
+.msg.info{color:var(--beam);border-color:var(--beam);background:rgba(61,224,255,.08)}
+.hidden{display:none !important}
+
+/* ---------- tablica krajów ---------- */
+.board{border-top:1px solid var(--line);margin-top:20px}
+.crow{display:flex;align-items:center;gap:14px;padding:11px 4px;border-bottom:1px solid var(--line)}
+.crow.active{background:linear-gradient(90deg,rgba(255,45,111,.14),transparent 70%)}
+.flag{font-size:26px;line-height:1;width:34px;text-align:center;flex:none}
+.cname{flex:1;font-weight:500;letter-spacing:.01em}
+.crow.active .cname{color:#fff}
+.stepper{display:flex;align-items:center;gap:6px;flex:none}
+.step{width:38px;height:38px;border-radius:2px;border:1px solid var(--line);background:rgba(10,6,24,.6);color:var(--ink);font-size:20px;line-height:1;cursor:pointer;font-family:var(--body)}
+.step:hover:not(:disabled){border-color:var(--spot);color:var(--spot)}
+.step:disabled{opacity:.25;cursor:not-allowed}
+.score{font-family:var(--mono);font-weight:700;font-size:19px;width:44px;text-align:center;color:var(--ink-dim)}
+.crow.active .score{color:var(--points)}
+.searchbar{margin-top:24px}
+
+/* ---------- pasek dolny (lower third) ---------- */
+.lower{
+  position:fixed;left:0;right:0;bottom:0;z-index:5;
+  background:rgba(10,6,24,.92);backdrop-filter:blur(10px);border-top:1px solid var(--line);
+}
+.lower-in{max-width:940px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.remain{font-family:var(--display);font-size:40px;line-height:1;color:var(--points);min-width:72px}
+.remain small{font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--ink-dim);display:block;margin-top:4px}
+.meter{flex:1;min-width:120px;height:6px;background:rgba(242,236,255,.12);border-radius:99px;overflow:hidden}
+.meter i{display:block;height:100%;background:linear-gradient(90deg,var(--spot),var(--points));width:0;transition:width .25s ease}
+
+/* ---------- panel admina ---------- */
+.tabs{display:flex;gap:2px;margin-top:26px;flex-wrap:wrap}
+.tab{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;background:transparent;border:1px solid var(--line);border-bottom:0;color:var(--ink-dim);padding:11px 15px;cursor:pointer}
+.tab.on{background:var(--stage);color:var(--ink);border-color:var(--spot)}
+.tabpanel{display:none}
+.tabpanel.on{display:block}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}
+.stat{background:var(--stage);padding:16px}
+.stat b{display:block;font-family:var(--display);font-size:40px;line-height:1;color:var(--ink)}
+.stat span{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-dim)}
+.sb{margin-top:22px}
+.sbrow{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);position:relative}
+.sbrow .bar{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,rgba(255,45,111,.22),rgba(255,200,74,.06));z-index:-1}
+.rank{font-family:var(--mono);font-size:12px;color:var(--ink-dim);width:26px;flex:none}
+.pts{font-family:var(--mono);font-weight:700;font-size:16px;color:var(--points);background:rgba(255,200,74,.12);padding:4px 10px;border-radius:2px;flex:none;min-width:52px;text-align:center}
+.keylist{margin-top:18px;max-height:420px;overflow:auto;border:1px solid var(--line)}
+.keyrow{display:flex;align-items:center;gap:12px;padding:9px 12px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:13px}
+.keyrow:last-child{border-bottom:0}
+.keyrow .k{flex:1;letter-spacing:.08em}
+.tag{font-size:10px;letter-spacing:.16em;padding:3px 8px;border-radius:2px}
+.tag.free{background:rgba(59,224,139,.14);color:var(--ok)}
+.tag.used{background:rgba(255,92,92,.14);color:var(--bad)}
+.when{color:var(--ink-dim);font-size:11px}
+.toggle{display:flex;align-items:center;gap:14px;padding:18px;border:1px solid var(--line);background:rgba(10,6,24,.4)}
+.toggle .lbl{flex:1}
+.toggle .lbl b{display:block;font-family:var(--display);font-size:26px;text-transform:uppercase}
+.toggle .lbl small{color:var(--ink-dim)}
+.note{font-size:13px;color:var(--ink-dim);margin-top:14px}
+code{font-family:var(--mono);font-size:12px;background:rgba(242,236,255,.08);padding:2px 6px;border-radius:2px}
+.cinfo{display:flex;align-items:center;gap:12px;padding:8px 10px;border-bottom:1px solid var(--line)}
+.cinfo:last-child{border-bottom:0}
+
+@media (max-width:600px){
+  .crow{gap:9px;padding:9px 2px}
+  .flag{font-size:22px;width:26px}
+  .cname{font-size:14px}
+  .step{width:34px;height:34px}
+  .remain{font-size:32px}
+  .lower-in{gap:12px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none !important;transition:none !important}
+}
+</style>
+</head>
+<body>
+<div class="stagelight"></div>
+<div class="grain"></div>
+
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand"><span class="dot"></span> <b>EUROWIZJA</b> · SYSTEM GŁOSOWANIA</div>
+    <div class="row">
+      <button class="navlink" data-go="home">Głosowanie</button>
+      <button class="navlink" data-go="admin">Panel admina</button>
+    </div>
+  </div>
+
+  <!-- ══════════ EKRAN STARTOWY ══════════ -->
+  <section id="view-home" class="view on">
+    <div class="hero">
+      <p class="eyebrow" id="homeEyebrow">Ładowanie…</p>
+      <h1>Twoje<br>punkty<br>czekają</h1>
+      <p class="lede">Masz 45 punktów do rozdania między kraje konkursu. Na jeden kraj możesz oddać najwyżej 10. Do głosowania potrzebujesz klucza.</p>
+      <button class="bigbtn" id="btnStart">GŁOSUJĘ <span class="arrow">→</span></button>
+      <p class="statusline" id="homeStatus"></p>
+      <div class="rules">
+        <div class="rule"><div class="n">45</div><p>punktów na osobę, do rozdania w całości lub w części.</p></div>
+        <div class="rule"><div class="n">10</div><p>to maksimum, jakie może dostać jeden kraj.</p></div>
+        <div class="rule"><div class="n">1</div><p>klucz to jeden głos. Po wysłaniu klucz wygasa.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ GŁOSOWANIE ══════════ -->
+  <section id="view-vote" class="view">
+    <!-- krok 1: klucz -->
+    <div id="stepKey">
+      <p class="eyebrow">Krok 1 z 2</p>
+      <h2>Podaj klucz głosu</h2>
+      <p class="lede">Klucz dostajesz od organizatora. Działa tylko raz.</p>
+      <div class="panel" style="max-width:520px">
+        <label class="field"><span>Klucz</span>
+          <input type="text" id="keyField" class="keyinput" placeholder="XXXX-XXXX" autocomplete="off" spellcheck="false">
+        </label>
+        <div class="row">
+          <button class="btn pink" id="btnKey">Sprawdź klucz</button>
+          <button class="btn ghost" data-go="home">Wróć</button>
+        </div>
+        <div id="keyMsg"></div>
+      </div>
+    </div>
+
+    <!-- krok 2: rozdanie punktów -->
+    <div id="stepVote" class="hidden">
+      <p class="eyebrow">Krok 2 z 2 · klucz <span id="keyBadge"></span></p>
+      <h2>Rozdaj punkty</h2>
+      <label class="field searchbar" style="max-width:360px"><span>Szukaj kraju</span>
+        <input type="text" id="search" placeholder="np. Polska" autocomplete="off">
+      </label>
+      <div class="board" id="board"></div>
+      <div id="voteMsg"></div>
+    </div>
+  </section>
+
+  <!-- ══════════ PANEL ADMINA ══════════ -->
+  <section id="view-admin" class="view">
+    <!-- logowanie -->
+    <div id="adminLogin">
+      <p class="eyebrow">Dostęp ograniczony</p>
+      <h2>Panel admina</h2>
+      <div class="panel" style="max-width:420px">
+        <label class="field"><span>Login</span><input type="text" id="admUser" autocomplete="username"></label>
+        <label class="field"><span>Hasło</span><input type="password" id="admPass" autocomplete="current-password"></label>
+        <button class="btn pink" id="btnLogin">Zaloguj</button>
+        <div id="loginMsg"></div>
+      </div>
+    </div>
+
+    <!-- środek panelu -->
+    <div id="adminBody" class="hidden">
+      <div class="row" style="justify-content:space-between">
+        <div>
+          <p class="eyebrow" id="admBackend"></p>
+          <h2>Panel admina</h2>
+        </div>
+        <button class="btn ghost small" id="btnLogout">Wyloguj</button>
+      </div>
+
+      <div class="tabs">
+        <button class="tab on" data-tab="wyniki">Wyniki</button>
+        <button class="tab" data-tab="kraje">Państwa</button>
+        <button class="tab" data-tab="klucze">Klucze</button>
+        <button class="tab" data-tab="ustawienia">Ustawienia</button>
+      </div>
+
+      <!-- WYNIKI -->
+      <div class="tabpanel on" id="tab-wyniki">
+        <div class="panel">
+          <div class="row" style="justify-content:space-between;margin-bottom:18px">
+            <h3 style="margin:0">Tablica wyników</h3>
+            <div class="row">
+              <button class="btn ghost small" id="btnRefresh">Odśwież</button>
+              <button class="btn ghost small" id="btnCsv">Pobierz CSV</button>
+            </div>
+          </div>
+          <div class="stats" id="stats"></div>
+          <div class="sb" id="scoreboard"></div>
+        </div>
+      </div>
+
+      <!-- PAŃSTWA -->
+      <div class="tabpanel" id="tab-kraje">
+        <div class="panel">
+          <h3>Dodaj państwo</h3>
+          <div class="row" style="align-items:flex-end">
+            <label class="field" style="width:90px;margin:0"><span>Flaga</span><input type="text" id="newFlag" placeholder="🇵🇱" maxlength="8"></label>
+            <label class="field" style="flex:1;min-width:180px;margin:0"><span>Nazwa</span><input type="text" id="newName" placeholder="Polska"></label>
+            <button class="btn pink" id="btnAddCountry">Dodaj</button>
+          </div>
+          <div id="countryMsg"></div>
+          <h3 style="margin-top:26px">Lista startowa (<span id="cCount">0</span>)</h3>
+          <div id="countryList" style="border:1px solid var(--line)"></div>
+          <div class="row" style="margin-top:16px">
+            <button class="btn ghost small" id="btnResetCountries">Przywróć listę domyślną</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- KLUCZE -->
+      <div class="tabpanel" id="tab-klucze">
+        <div class="panel">
+          <h3>Wygeneruj klucze</h3>
+          <div class="row" style="align-items:flex-end">
+            <label class="field" style="width:140px;margin:0"><span>Ile sztuk</span><input type="number" id="keyCount" value="10" min="1" max="500"></label>
+            <button class="btn pink" id="btnGenKeys">Generuj</button>
+            <button class="btn ghost" id="btnCopyFree">Kopiuj niewykorzystane</button>
+          </div>
+          <div id="genMsg"></div>
+
+          <h3 style="margin-top:26px">Sprawdź klucz</h3>
+          <div class="row" style="align-items:flex-end">
+            <label class="field" style="flex:1;min-width:180px;margin:0"><span>Klucz lub fragment</span><input type="text" id="keySearch" placeholder="wpisz, by filtrować listę"></label>
+          </div>
+          <div class="keylist" id="keyList"></div>
+          <div class="row" style="margin-top:16px">
+            <button class="btn danger small" id="btnDelUsed">Usuń wykorzystane klucze</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- USTAWIENIA -->
+      <div class="tabpanel" id="tab-ustawienia">
+        <div class="panel">
+          <h3>Stan głosowania</h3>
+          <div class="toggle">
+            <div class="lbl">
+              <b id="votingState">—</b>
+              <small id="votingHint">—</small>
+            </div>
+            <button class="btn pink" id="btnToggleVoting">Zmień</button>
+          </div>
+          <h3 style="margin-top:28px">Baza danych</h3>
+          <p class="note" id="backendNote"></p>
+          <h3 style="margin-top:28px">Strefa ryzyka</h3>
+          <p class="note">Kasowanie oddanych głosów zeruje tablicę wyników i zwalnia wszystkie klucze.</p>
+          <div class="row" style="margin-top:12px">
+            <button class="btn danger small" id="btnResetVotes">Wyczyść oddane głosy</button>
+            <button class="btn danger small" id="btnWipeKeys">Usuń wszystkie klucze</button>
+          </div>
+          <div id="settingsMsg"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- pasek dolny podczas głosowania -->
+<div class="lower hidden" id="lower">
+  <div class="lower-in">
+    <div class="remain"><span id="remainNum">45</span><small>pozostało z 45</small></div>
+    <div class="meter"><i id="meterFill"></i></div>
+    <button class="btn pink" id="btnSubmit">ZAGŁOSUJ</button>
+  </div>
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════════════
+   1. KONFIGURACJA — tu zmieniasz ustawienia
+   ════════════════════════════════════════════════════════════ */
+const CONFIG = {
+  // "local"    = dane w przeglądarce (demo, jedno urządzenie)
+  // "supabase" = wspólna baza w chmurze (prawdziwe głosowanie)
+  backend: "local",
+
+  supabaseUrl: "",   // np. "https://abcdefgh.supabase.co"
+  supabaseKey: "",   // klucz "anon public" z Supabase
+
+  adminUser: "BunBun21",
+  adminPass: "Robotobibok2",
+
+  maxTotal: 45,
+  maxPerCountry: 10
+};
+
+const DEFAULT_COUNTRIES = [
+  ["🇦🇱","Albania"],["🇦🇲","Armenia"],["🇦🇺","Australia"],["🇦🇹","Austria"],
+  ["🇦🇿","Azerbejdżan"],["🇧🇪","Belgia"],["🇭🇷","Chorwacja"],["🇨🇾","Cypr"],
+  ["🇨🇿","Czechy"],["🇩🇰","Dania"],["🇪🇪","Estonia"],["🇫🇮","Finlandia"],
+  ["🇫🇷","Francja"],["🇬🇪","Gruzja"],["🇬🇷","Grecja"],["🇪🇸","Hiszpania"],
+  ["🇳🇱","Holandia"],["🇮🇪","Irlandia"],["🇮🇸","Islandia"],["🇮🇱","Izrael"],
+  ["🇱🇹","Litwa"],["🇱🇺","Luksemburg"],["🇱🇻","Łotwa"],["🇲🇹","Malta"],
+  ["🇲🇪","Czarnogóra"],["🇩🇪","Niemcy"],["🇳🇴","Norwegia"],["🇵🇱","Polska"],
+  ["🇵🇹","Portugalia"],["🇸🇲","San Marino"],["🇷🇸","Serbia"],["🇸🇮","Słowenia"],
+  ["🇨🇭","Szwajcaria"],["🇸🇪","Szwecja"],["🇺🇦","Ukraina"],["🇭🇺","Węgry"],
+  ["🇬🇧","Wielka Brytania"],["🇮🇹","Włochy"]
+].map(function(c,i){ return { id:"c"+(i+1), flag:c[0], name:c[1] }; });
+
+/* ════════════════════════════════════════════════════════════
+   2. WARSTWA DANYCH
+   ════════════════════════════════════════════════════════════ */
+var memStore = {};
+var lsOK = true;
+try { localStorage.setItem("__t","1"); localStorage.removeItem("__t"); } catch(e){ lsOK = false; }
+
+function rd(k, d){
+  if (lsOK) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch(e){} }
+  return (k in memStore) ? memStore[k] : d;
+}
+function wr(k, v){
+  if (lsOK) { try { localStorage.setItem(k, JSON.stringify(v)); return; } catch(e){} }
+  memStore[k] = v;
+}
+
+function sbUrl(path){ return CONFIG.supabaseUrl.replace(/\/+$/,"") + "/rest/v1/" + path; }
+async function sb(path, opts){
+  opts = opts || {};
+  var headers = {
+    apikey: CONFIG.supabaseKey,
+    Authorization: "Bearer " + CONFIG.supabaseKey,
+    "Content-Type": "application/json",
+    Prefer: opts.prefer || "return=representation"
+  };
+  var res = await fetch(sbUrl(path), { method: opts.method || "GET", headers: headers, body: opts.body });
+  var txt = await res.text();
+  if (!res.ok) throw new Error("Baza odrzuciła zapytanie (" + res.status + "). " + txt.slice(0,180));
+  return txt ? JSON.parse(txt) : null;
+}
+
+var Store = {
+  get remote(){ return CONFIG.backend === "supabase" && CONFIG.supabaseUrl && CONFIG.supabaseKey; },
+
+  async getConfig(){
+    if (!this.remote) return rd("euro_config", { votingOpen:false, countries:DEFAULT_COUNTRIES });
+    var rows = await sb("config?id=eq.1&select=*");
+    if (!rows || !rows.length){
+      await sb("config", { method:"POST", body: JSON.stringify({ id:1, voting_open:false, countries:DEFAULT_COUNTRIES }) });
+      return { votingOpen:false, countries:DEFAULT_COUNTRIES };
+    }
+    return { votingOpen: !!rows[0].voting_open, countries: rows[0].countries || [] };
+  },
+
+  async saveConfig(cfg){
+    if (!this.remote) { wr("euro_config", cfg); return; }
+    await sb("config?id=eq.1", { method:"PATCH", body: JSON.stringify({ voting_open: cfg.votingOpen, countries: cfg.countries }) });
+  },
+
+  async listKeys(){
+    if (!this.remote) return rd("euro_keys", []);
+    return await sb("vote_keys?select=*&order=created_at.desc") || [];
+  },
+
+  async addKeys(keys){
+    var rows = keys.map(function(k){ return { key:k, used:false, used_at:null, votes:null }; });
+    if (!this.remote) { var all = rd("euro_keys", []); wr("euro_keys", rows.concat(all)); return; }
+    await sb("vote_keys", { method:"POST", body: JSON.stringify(rows) });
+  },
+
+  async findKey(k){
+    if (!this.remote) {
+      var all = rd("euro_keys", []);
+      for (var i=0;i<all.length;i++) if (all[i].key === k) return all[i];
+      return null;
+    }
+    var rows = await sb("vote_keys?key=eq." + encodeURIComponent(k) + "&select=*");
+    return (rows && rows.length) ? rows[0] : null;
+  },
+
+  // Zapisuje głos tylko wtedy, gdy klucz jest wolny — chroni przed podwójnym użyciem.
+  async castVote(k, votes){
+    var now = new Date().toISOString();
+    if (!this.remote) {
+      var all = rd("euro_keys", []), hit = null;
+      for (var i=0;i<all.length;i++) if (all[i].key === k) hit = all[i];
+      if (!hit) throw new Error("Nie znaleziono takiego klucza.");
+      if (hit.used) throw new Error("Ten klucz został już wykorzystany.");
+      hit.used = true; hit.used_at = now; hit.votes = votes;
+      wr("euro_keys", all);
+      return;
+    }
+    var rows = await sb("vote_keys?key=eq." + encodeURIComponent(k) + "&used=is.false", {
+      method:"PATCH",
+      body: JSON.stringify({ used:true, used_at:now, votes:votes })
+    });
+    if (!rows || !rows.length) throw new Error("Ten klucz został już wykorzystany w międzyczasie.");
+  },
+
+  async deleteKeys(filter){ // filter: "used" | "all"
+    if (!this.remote) {
+      var all = rd("euro_keys", []);
+      wr("euro_keys", filter === "all" ? [] : all.filter(function(r){ return !r.used; }));
+      return;
+    }
+    await sb(filter === "all" ? "vote_keys?key=neq.__none__" : "vote_keys?used=is.true",
+      { method:"DELETE", prefer:"return=minimal" });
+  },
+
+  async clearVotes(){
+    if (!this.remote) {
+      var all = rd("euro_keys", []).map(function(r){ r.used=false; r.used_at=null; r.votes=null; return r; });
+      wr("euro_keys", all);
+      return;
+    }
+    await sb("vote_keys?used=is.true", { method:"PATCH", prefer:"return=minimal",
+      body: JSON.stringify({ used:false, used_at:null, votes:null }) });
+  }
+};
+
+/* ════════════════════════════════════════════════════════════
+   3. STAN APLIKACJI + POMOCNICZE
+   ════════════════════════════════════════════════════════════ */
+var state = { config:{ votingOpen:false, countries:[] }, key:null, votes:{}, admin:false, keysCache:[] };
+
+function $(sel){ return document.querySelector(sel); }
+function $$(sel){ return Array.prototype.slice.call(document.querySelectorAll(sel)); }
+function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]; }); }
+function say(el, text, kind){ el.innerHTML = text ? '<div class="msg ' + (kind||"info") + '">' + esc(text) + '</div>' : ""; }
+function fmtDate(s){ if(!s) return ""; var d = new Date(s); return isNaN(d) ? "" : d.toLocaleString("pl-PL"); }
+
+function show(view){
+  $$(".view").forEach(function(v){ v.classList.remove("on"); });
+  $("#view-" + view).classList.add("on");
+  $("#lower").classList.toggle("hidden", !(view === "vote" && !$("#stepVote").classList.contains("hidden")));
+  window.scrollTo({ top:0, behavior:"smooth" });
+}
+
+/* ════════════════════════════════════════════════════════════
+   4. EKRAN STARTOWY
+   ════════════════════════════════════════════════════════════ */
+async function loadConfig(){
+  try {
+    state.config = await Store.getConfig();
+  } catch(e){
+    $("#homeEyebrow").textContent = "Brak połączenia z bazą";
+    $("#homeStatus").innerHTML = '<span class="pill closed">' + esc(e.message) + '</span>';
+    return;
+  }
+  var open = state.config.votingOpen;
+  $("#homeEyebrow").textContent = open ? "Na antenie" : "Poza anteną";
+  $("#homeStatus").innerHTML = open
+    ? '<span class="pill open">Głosowanie otwarte</span> · ' + state.config.countries.length + ' państw w stawce'
+    : '<span class="pill closed">Głosowanie zamknięte</span> · wróć, gdy organizator je otworzy';
+  $("#btnStart").disabled = !open;
+}
+
+/* ════════════════════════════════════════════════════════════
+   5. GŁOSOWANIE
+   ════════════════════════════════════════════════════════════ */
+function usedTotal(){
+  var s = 0; for (var id in state.votes) s += state.votes[id]; return s;
+}
+
+function renderBoard(){
+  var q = $("#search").value.trim().toLowerCase();
+  var html = state.config.countries.map(function(c){
+    if (q && c.name.toLowerCase().indexOf(q) === -1) return "";
+    var n = state.votes[c.id] || 0;
+    var left = CONFIG.maxTotal - usedTotal();
+    return '<div class="crow' + (n > 0 ? ' active' : '') + '">' +
+      '<div class="flag">' + esc(c.flag) + '</div>' +
+      '<div class="cname">' + esc(c.name) + '</div>' +
+      '<div class="stepper">' +
+        '<button class="step" data-minus="' + c.id + '"' + (n <= 0 ? ' disabled' : '') + ' aria-label="Odejmij punkt">−</button>' +
+        '<div class="score">' + String(n).padStart(2,"0") + '</div>' +
+        '<button class="step" data-plus="' + c.id + '"' + ((n >= CONFIG.maxPerCountry || left <= 0) ? ' disabled' : '') + ' aria-label="Dodaj punkt">+</button>' +
+      '</div></div>';
+  }).join("");
+  $("#board").innerHTML = html || '<p class="note" style="padding:16px 0">Żaden kraj nie pasuje do wyszukiwania.</p>';
+
+  var left = CONFIG.maxTotal - usedTotal();
+  $("#remainNum").textContent = left;
+  $("#meterFill").style.width = (usedTotal() / CONFIG.maxTotal * 100) + "%";
+  $("#btnSubmit").disabled = usedTotal() === 0;
+}
+
+$("#btnStart").addEventListener("click", function(){
+  show("vote");
+  $("#stepKey").classList.remove("hidden");
+  $("#stepVote").classList.add("hidden");
+  $("#lower").classList.add("hidden");
+  $("#keyField").focus();
+});
+
+$("#btnKey").addEventListener("click", async function(){
+  var k = $("#keyField").value.trim().toUpperCase();
+  if (!k) { say($("#keyMsg"), "Wpisz klucz, żeby przejść dalej.", "err"); return; }
+  say($("#keyMsg"), "Sprawdzam…", "info");
+  try {
+    state.config = await Store.getConfig();
+    if (!state.config.votingOpen) { say($("#keyMsg"), "Głosowanie jest zamknięte.", "err"); return; }
+    var row = await Store.findKey(k);
+    if (!row) { say($("#keyMsg"), "Nie ma takiego klucza. Sprawdź pisownię.", "err"); return; }
+    if (row.used) { say($("#keyMsg"), "Ten klucz został już wykorzystany " + fmtDate(row.used_at) + ".", "err"); return; }
+    state.key = k;
+    state.votes = {};
+    say($("#keyMsg"), "");
+    $("#keyBadge").textContent = k;
+    $("#stepKey").classList.add("hidden");
+    $("#stepVote").classList.remove("hidden");
+    $("#lower").classList.remove("hidden");
+    renderBoard();
+    window.scrollTo({ top:0, behavior:"smooth" });
+  } catch(e){ say($("#keyMsg"), e.message, "err"); }
+});
+
+$("#keyField").addEventListener("keydown", function(e){ if (e.key === "Enter") $("#btnKey").click(); });
+$("#search").addEventListener("input", renderBoard);
+
+$("#board").addEventListener("click", function(e){
+  var plus = e.target.getAttribute("data-plus"), minus = e.target.getAttribute("data-minus");
+  if (plus){
+    var n = state.votes[plus] || 0;
+    if (n < CONFIG.maxPerCountry && usedTotal() < CONFIG.maxTotal) state.votes[plus] = n + 1;
+    renderBoard();
+  } else if (minus){
+    var m = state.votes[minus] || 0;
+    if (m > 0) state.votes[minus] = m - 1;
+    if (state.votes[minus] === 0) delete state.votes[minus];
+    renderBoard();
+  }
+});
+
+$("#btnSubmit").addEventListener("click", async function(){
+  var total = usedTotal();
+  if (total === 0) return;
+  if (total < CONFIG.maxTotal && !confirm("Rozdałeś " + total + " z " + CONFIG.maxTotal + " punktów. Wysłać mimo to? Klucza nie da się użyć drugi raz.")) return;
+  $("#btnSubmit").disabled = true;
+  say($("#voteMsg"), "Wysyłam głos…", "info");
+  try {
+    await Store.castVote(state.key, state.votes);
+    var lines = state.config.countries
+      .filter(function(c){ return state.votes[c.id]; })
+      .sort(function(a,b){ return state.votes[b.id] - state.votes[a.id]; })
+      .map(function(c){ return c.flag + " " + c.name + " — " + state.votes[c.id] + " pkt"; });
+    $("#stepVote").innerHTML =
+      '<p class="eyebrow">Zapisano</p><h2>Głos przyjęty</h2>' +
+      '<p class="lede">Twoje punkty trafiły na tablicę. Klucz <code>' + esc(state.key) + '</code> jest już zużyty.</p>' +
+      '<div class="panel" style="max-width:520px"><h3>Twoje punkty</h3>' + lines.map(function(l){ return '<div class="cinfo">' + esc(l) + '</div>'; }).join("") +
+      '</div><div class="row" style="margin-top:20px"><button class="btn ghost" data-go="home">Wróć na start</button></div>';
+    $("#lower").classList.add("hidden");
+    state.key = null; state.votes = {};
+    window.scrollTo({ top:0, behavior:"smooth" });
+  } catch(e){
+    say($("#voteMsg"), e.message, "err");
+    $("#btnSubmit").disabled = false;
+  }
+});
+
+/* ════════════════════════════════════════════════════════════
+   6. PANEL ADMINA
+   ════════════════════════════════════════════════════════════ */
+$("#btnLogin").addEventListener("click", async function(){
+  var u = $("#admUser").value.trim(), p = $("#admPass").value;
+  if (u !== CONFIG.adminUser || p !== CONFIG.adminPass){
+    say($("#loginMsg"), "Login lub hasło się nie zgadza.", "err");
+    return;
+  }
+  state.admin = true;
+  say($("#loginMsg"), "");
+  $("#adminLogin").classList.add("hidden");
+  $("#adminBody").classList.remove("hidden");
+  $("#admBackend").textContent = Store.remote ? "Baza: Supabase" : (lsOK ? "Baza: pamięć przeglądarki (tryb demo)" : "Baza: pamięć sesji (dane znikną po odświeżeniu)");
+  await refreshAdmin();
+});
+$("#admPass").addEventListener("keydown", function(e){ if (e.key === "Enter") $("#btnLogin").click(); });
+
+$("#btnLogout").addEventListener("click", function(){
+  state.admin = false;
+  $("#adminBody").classList.add("hidden");
+  $("#adminLogin").classList.remove("hidden");
+  $("#admPass").value = "";
+});
+
+$$(".tab").forEach(function(t){
+  t.addEventListener("click", function(){
+    $$(".tab").forEach(function(x){ x.classList.remove("on"); });
+    $$(".tabpanel").forEach(function(x){ x.classList.remove("on"); });
+    t.classList.add("on");
+    $("#tab-" + t.getAttribute("data-tab")).classList.add("on");
+  });
+});
+
+async function refreshAdmin(){
+  try {
+    state.config = await Store.getConfig();
+    state.keysCache = await Store.listKeys();
+  } catch(e){
+    say($("#settingsMsg"), e.message, "err");
+    return;
+  }
+  renderResults();
+  renderCountriesAdmin();
+  renderKeys();
+  renderSettings();
+}
+
+function tally(){
+  var totals = {}, voters = 0, points = 0;
+  state.config.countries.forEach(function(c){ totals[c.id] = 0; });
+  state.keysCache.forEach(function(r){
+    if (!r.used || !r.votes) return;
+    voters++;
+    for (var id in r.votes){
+      totals[id] = (totals[id] || 0) + r.votes[id];
+      points += r.votes[id];
+    }
+  });
+  return { totals: totals, voters: voters, points: points };
+}
+
+function renderResults(){
+  var t = tally();
+  var free = state.keysCache.filter(function(r){ return !r.used; }).length;
+  $("#stats").innerHTML =
+    '<div class="stat"><b>' + t.voters + '</b><span>oddanych głosów</span></div>' +
+    '<div class="stat"><b>' + t.points + '</b><span>rozdanych punktów</span></div>' +
+    '<div class="stat"><b>' + state.config.countries.length + '</b><span>państw</span></div>' +
+    '<div class="stat"><b>' + free + '</b><span>wolnych kluczy</span></div>';
+
+  var rows = state.config.countries.map(function(c){
+    return { flag:c.flag, name:c.name, pts:t.totals[c.id] || 0 };
+  }).sort(function(a,b){ return b.pts - a.pts || a.name.localeCompare(b.name,"pl"); });
+
+  var max = rows.length ? Math.max(1, rows[0].pts) : 1;
+  $("#scoreboard").innerHTML = rows.map(function(r,i){
+    return '<div class="sbrow"><div class="bar" style="width:' + (r.pts / max * 100) + '%"></div>' +
+      '<div class="rank">' + String(i+1).padStart(2,"0") + '</div>' +
+      '<div class="flag">' + esc(r.flag) + '</div>' +
+      '<div class="cname">' + esc(r.name) + '</div>' +
+      '<div class="pts">' + r.pts + '</div></div>';
+  }).join("") || '<p class="note">Brak państw na liście.</p>';
+}
+
+$("#btnRefresh").addEventListener("click", refreshAdmin);
+
+$("#btnCsv").addEventListener("click", function(){
+  var t = tally();
+  var rows = state.config.countries.map(function(c){ return { name:c.name, pts:t.totals[c.id] || 0 }; })
+    .sort(function(a,b){ return b.pts - a.pts; });
+  var csv = "miejsce,panstwo,punkty\n" + rows.map(function(r,i){ return (i+1) + ',"' + r.name.replace(/"/g,'""') + '",' + r.pts; }).join("\n");
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["\ufeff" + csv], { type:"text/csv;charset=utf-8" }));
+  a.download = "wyniki-eurowizja.csv";
+  a.click();
+});
+
+/* --- państwa --- */
+function renderCountriesAdmin(){
+  $("#cCount").textContent = state.config.countries.length;
+  $("#countryList").innerHTML = state.config.countries.map(function(c){
+    return '<div class="cinfo"><div class="flag">' + esc(c.flag) + '</div><div class="cname">' + esc(c.name) + '</div>' +
+      '<button class="btn danger small" data-del="' + c.id + '">Usuń</button></div>';
+  }).join("") || '<p class="note" style="padding:14px">Lista jest pusta. Dodaj pierwsze państwo.</p>';
+}
+
+$("#btnAddCountry").addEventListener("click", async function(){
+  var flag = $("#newFlag").value.trim() || "🏳️";
+  var name = $("#newName").value.trim();
+  if (!name) { say($("#countryMsg"), "Podaj nazwę państwa.", "err"); return; }
+  state.config.countries.push({ id:"c" + Date.now().toString(36), flag:flag, name:name });
+  await Store.saveConfig(state.config);
+  $("#newFlag").value = ""; $("#newName").value = "";
+  say($("#countryMsg"), "Dodano " + name + ".", "ok");
+  renderCountriesAdmin(); renderResults();
+});
+
+$("#countryList").addEventListener("click", async function(e){
+  var id = e.target.getAttribute("data-del");
+  if (!id) return;
+  if (!confirm("Usunąć to państwo z listy? Punkty już mu oddane przestaną się liczyć.")) return;
+  state.config.countries = state.config.countries.filter(function(c){ return c.id !== id; });
+  await Store.saveConfig(state.config);
+  renderCountriesAdmin(); renderResults();
+});
+
+$("#btnResetCountries").addEventListener("click", async function(){
+  if (!confirm("Przywrócić domyślną listę państw? Obecna lista zostanie nadpisana.")) return;
+  state.config.countries = JSON.parse(JSON.stringify(DEFAULT_COUNTRIES));
+  await Store.saveConfig(state.config);
+  say($("#countryMsg"), "Przywrócono listę domyślną.", "ok");
+  renderCountriesAdmin(); renderResults();
+});
+
+/* --- klucze --- */
+var ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+function makeKey(){
+  var out = "";
+  for (var i=0;i<8;i++){
+    out += ALPHABET[Math.floor(Math.random() * ALPHABET.length)];
+    if (i === 3) out += "-";
+  }
+  return out;
+}
+
+function renderKeys(){
+  var q = $("#keySearch").value.trim().toUpperCase();
+  var rows = state.keysCache.filter(function(r){ return !q || r.key.indexOf(q) !== -1; });
+  $("#keyList").innerHTML = rows.map(function(r){
+    return '<div class="keyrow"><span class="k">' + esc(r.key) + '</span>' +
+      (r.used
+        ? '<span class="when">' + esc(fmtDate(r.used_at)) + '</span><span class="tag used">wykorzystany</span>'
+        : '<span class="tag free">wolny</span>') +
+      '</div>';
+  }).join("") || '<p class="note" style="padding:14px">Brak kluczy do pokazania.</p>';
+}
+
+$("#keySearch").addEventListener("input", renderKeys);
+
+$("#btnGenKeys").addEventListener("click", async function(){
+  var n = Math.max(1, Math.min(500, parseInt($("#keyCount").value, 10) || 0));
+  var existing = {};
+  state.keysCache.forEach(function(r){ existing[r.key] = 1; });
+  var fresh = [];
+  var guard = 0;
+  while (fresh.length < n && guard++ < n * 50){
+    var k = makeKey();
+    if (!existing[k]) { existing[k] = 1; fresh.push(k); }
+  }
+  try {
+    await Store.addKeys(fresh);
+    state.keysCache = await Store.listKeys();
+    renderKeys(); renderResults();
+    say($("#genMsg"), "Wygenerowano " + fresh.length + " kluczy: " + fresh.join(", "), "ok");
+  } catch(e){ say($("#genMsg"), e.message, "err"); }
+});
+
+$("#btnCopyFree").addEventListener("click", function(){
+  var free = state.keysCache.filter(function(r){ return !r.used; }).map(function(r){ return r.key; });
+  if (!free.length) { say($("#genMsg"), "Nie ma wolnych kluczy do skopiowania.", "err"); return; }
+  navigator.clipboard.writeText(free.join("\n")).then(
+    function(){ say($("#genMsg"), "Skopiowano " + free.length + " kluczy do schowka.", "ok"); },
+    function(){ say($("#genMsg"), free.join(", "), "info"); }
+  );
+});
+
+$("#btnDelUsed").addEventListener("click", async function(){
+  if (!confirm("Usunąć wykorzystane klucze? Oddane przez nie punkty znikną z tablicy.")) return;
+  try {
+    await Store.deleteKeys("used");
+    state.keysCache = await Store.listKeys();
+    renderKeys(); renderResults();
+    say($("#genMsg"), "Usunięto wykorzystane klucze.", "ok");
+  } catch(e){ say($("#genMsg"), e.message, "err"); }
+});
+
+/* --- ustawienia --- */
+function renderSettings(){
+  var open = state.config.votingOpen;
+  $("#votingState").textContent = open ? "Otwarte" : "Zamknięte";
+  $("#votingHint").textContent = open ? "Ludzie mogą teraz oddawać głosy." : "Przycisk GŁOSUJĘ jest nieaktywny.";
+  $("#btnToggleVoting").textContent = open ? "Zamknij głosowanie" : "Otwórz głosowanie";
+  $("#backendNote").innerHTML = Store.remote
+    ? "Dane trafiają do Supabase pod adresem <code>" + esc(CONFIG.supabaseUrl) + "</code>. Wszyscy głosujący widzą tę samą tablicę."
+    : "Działa tryb demo — dane siedzą w tej przeglądarce i nie są widoczne na innych urządzeniach. Żeby zebrać głosy od wielu osób, ustaw <code>backend: \"supabase\"</code> w pliku <code>index.html</code>.";
+}
+
+$("#btnToggleVoting").addEventListener("click", async function(){
+  state.config.votingOpen = !state.config.votingOpen;
+  try {
+    await Store.saveConfig(state.config);
+    renderSettings();
+    say($("#settingsMsg"), state.config.votingOpen ? "Głosowanie otwarte." : "Głosowanie zamknięte.", "ok");
+  } catch(e){ say($("#settingsMsg"), e.message, "err"); }
+});
+
+$("#btnResetVotes").addEventListener("click", async function(){
+  if (!confirm("Wyczyścić wszystkie oddane głosy? Klucze wrócą do puli wolnych.")) return;
+  try {
+    await Store.clearVotes();
+    state.keysCache = await Store.listKeys();
+    renderResults(); renderKeys();
+    say($("#settingsMsg"), "Tablica wyzerowana.", "ok");
+  } catch(e){ say($("#settingsMsg"), e.message, "err"); }
+});
+
+$("#btnWipeKeys").addEventListener("click", async function(){
+  if (!confirm("Usunąć wszystkie klucze bez wyjątku?")) return;
+  try {
+    await Store.deleteKeys("all");
+    state.keysCache = await Store.listKeys();
+    renderResults(); renderKeys();
+    say($("#settingsMsg"), "Wszystkie klucze usunięte.", "ok");
+  } catch(e){ say($("#settingsMsg"), e.message, "err"); }
+});
+
+/* ════════════════════════════════════════════════════════════
+   7. NAWIGACJA I START
+   ════════════════════════════════════════════════════════════ */
+document.addEventListener("click", function(e){
+  var go = e.target.getAttribute && e.target.getAttribute("data-go");
+  if (!go) return;
+  if (go === "home") { loadConfig(); location.hash = ""; }
+  if (go === "admin") location.hash = "#admin";
+  show(go);
+});
+
+if (location.hash === "#admin") show("admin");
+loadConfig();
+</script>
+</body>
+</html>
